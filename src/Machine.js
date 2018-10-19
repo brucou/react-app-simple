@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { create_state_machine, NO_OUTPUT } from "state-transducer";
+import { create_state_machine, decorateWithEntryActions, NO_OUTPUT } from "state-transducer";
 import { applyJSONpatch, identity } from "./helpers";
 import Rx from 'rxjs/Rx'
 import { COMMAND_RENDER, ERR_ACTION_EXECUTOR_COMMAND_EXEC } from "./properties"
@@ -13,18 +13,20 @@ import { COMMAND_RENDER, ERR_ACTION_EXECUTOR_COMMAND_EXEC } from "./properties"
 // the functions are not in scope of the constructor?
 export function triggerFnFactory(eventSource) {
   return eventName => {
-    return function (...args) {
-      debugger
-      return eventSource.next({ [eventName]: args })
+    // NOTE : that assumes all event handlers have only one parameter
+    return function (event) {
+      return eventSource.next({ [eventName]: event })
     }
   }
 }
 
 export function actionExecuterFactory(component, trigger, actionExecutorSpecs) {
   return actions => {
-    if (actions === NO_OUTPUT) {}
+    if (actions === NO_OUTPUT) {return}
 
     actions.forEach(action => {
+      if (action === NO_OUTPUT) {return}
+
       const { command, params } = action;
       if (command === COMMAND_RENDER) {
         // render actions are :: trigger -> Component
@@ -54,10 +56,11 @@ export class Machine extends Component {
 
   componentDidMount() {
     const machineComponent = this;
-    const { intentSourceFactory, fsmSpecs, actionExecutorSpecs, settings } = machineComponent.props;
+    const { intentSourceFactory, fsmSpecs, actionExecutorSpecs, entryActions, settings } = machineComponent.props;
     this.eventSource = new Rx.Subject();
     // NOTE: we put settings last. this way `updateState` can be overridden in settings
-    const fsm = create_state_machine(fsmSpecs, { updateState: applyJSONpatch, ...settings });
+    const fsmSpecsWithEntryActions = decorateWithEntryActions(fsmSpecs, entryActions, null);
+    const fsm = create_state_machine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch, ...settings });
     const trigger = triggerFnFactory(this.eventSource);
     const actionExecuter = actionExecuterFactory(machineComponent, trigger, actionExecutorSpecs);
     const initialAction = fsm.start();

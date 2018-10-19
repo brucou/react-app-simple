@@ -1,7 +1,7 @@
-import { INIT_EVENT, INIT_STATE } from "state-transducer";
+import { INIT_EVENT, INIT_STATE, NO_OUTPUT } from "state-transducer";
 import { Counter, Hello } from './sample-components'
 import { BUTTON_CLICKED, NO_MODEL_UPDATE } from "../properties"
-import { renderCommandFactory, renderAction } from "../helpers"
+import { getEventData, getEventName, renderAction, renderCommandFactory } from "../helpers"
 import h from "react-hyperscript"
 import React from 'react';
 
@@ -25,32 +25,43 @@ export const machines = {
     initialExtendedState: { name: 'Paul' }
   },
   initWithRenderAndEvent: {
-    intentSource: eventSource => eventSource.map(ev => ({ [BUTTON_CLICKED]: {} })),
+    // NOTE : only one event so not much to do
+    intentSourceFactory: eventSource => eventSource.map(ev => ({ [getEventName(ev)]: getEventData(ev).type })),
+    entryActions: {
+      A: (extendedState, eventData, fsmSettings) => {
+        const { count } = extendedState;
+        const { type } = eventData;
+
+        return renderAction(trigger => h(Counter, { count, type, onClick: trigger(BUTTON_CLICKED) }))
+      }
+    },
     states: { A: '' },
     events: [BUTTON_CLICKED],
     transitions: [
       {
         from: INIT_STATE, event: INIT_EVENT, to: 'A', action: (extendedState, eventData, fsmSettings) => {
-          const { count } = extendedState;
-
           return {
-            outputs: renderAction(trigger => r(Counter, { count, onClick: trigger(BUTTON_CLICKED) }, [])),
+            outputs: NO_OUTPUT,
             updates: NO_MODEL_UPDATE
           }
         }
       },
       {
         from: 'A', event: BUTTON_CLICKED, to: 'A', action: (extendedState, eventData, fsmSettings) => {
-          const { count } = extendedState;
-
           return {
-            outputs: renderAction(trigger => r(Counter, { count, onClick: trigger(BUTTON_CLICKED) }, [])),
+            outputs: NO_OUTPUT,
             updates: [{ op: 'add', path: '/count', value: count + 1 }]
           }
         }
       },
     ],
-    initialExtendedState: { count: 0 }
+    initialExtendedState: { count: 0, type: 'none' }
   },
 };
-// TODO : do one with event so I can showcase using trigger
+
+// TODO : showcase usage of settigns to parametrize the state machine for outside
+// at the end, with a linked summary of all examples. The parameter will be which state machine to run? NO
+// or just display a parameter that is passed in settings
+// TODO : showcase intent factory with several events
+// TODO : showcase intent factory with several events and rxjs logic
+// TODO : showcase reading value from uncontrolled component !!

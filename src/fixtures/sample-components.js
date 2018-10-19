@@ -15,9 +15,11 @@ export class Hello extends React.Component {
 export class Counter extends React.Component {
   render() {
     const Component = this;
-    const {count} = Component.props;
-    return button(`Count : ${count}`);
+    const {count, type, onClick} = Component.props;
+
+    return div([
+      button({onClick},`Count : ${count}`),
+      span(` -- Type : ${type || 'none'}`)
+      ]);
   }
 }
-
-// TODO : do one with event so I can showcase using trigger

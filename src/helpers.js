@@ -45,7 +45,7 @@ export function applyJSONpatch(extendedState, extendedStateUpdateOperations) {
   return applyPatch(extendedState, extendedStateUpdateOperations, false, false).newDocument;
 }
 
-export function identity(x){return x}
+export function identity(x) {return x}
 
 /**
  *
@@ -60,9 +60,22 @@ export function renderCommandFactory(Component, props = {}) {
   }
 }
 
-export function renderAction(params){
+export function renderAction(params) {
   return {
-    command : COMMAND_RENDER,
-    params
+    outputs: {
+      command: COMMAND_RENDER,
+      params,
+      // NOTE : this is not used anyways, there is no sense in updating the extended state in this context
+      // We keep it for type consistency
+      updateState: []
+    }
   }
+}
+
+export function getEventName(labelledEvent) {
+  return Object.keys(labelledEvent)[0]
+}
+
+export function getEventData(labelledEvent) {
+  return Object.values(labelledEvent)[0]
 }
