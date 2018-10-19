@@ -23,27 +23,27 @@ export function triggerFnFactory(eventSource) {
 }
 
 export function actionExecuterFactory(component, trigger, actionExecutorSpecs) {
-  return action => {
-    if (action === NO_OUTPUT) {}
+  return actions => {
+    if (actions === NO_OUTPUT) {}
 
-    const { command, params } = action;
-    const execFn = actionExecutorSpecs[command];
-    if (!execFn || typeof execFn !== 'function') {
-      throw new Error(ERR_ACTION_EXECUTOR_COMMAND_EXEC(command))
-    }
+    actions.forEach(action => {
+      const { command, params } = action;
+      if (command === COMMAND_RENDER) {
+        // render actions are :: trigger -> Component
+        // and close over the extended state of the machine
+        return component.setState({ render: params(trigger) })
+      }
 
-    if (command === COMMAND_RENDER) {
-      // render actions are :: trigger -> Component
-      // and close over the extended state of the machine
-      component.setState({ render: params(trigger) })
-    }
-    else {
+      const execFn = actionExecutorSpecs[command];
+      if (!execFn || typeof execFn !== 'function') {
+        throw new Error(ERR_ACTION_EXECUTOR_COMMAND_EXEC(command))
+      }
       return execFn(params)
-    }
+    })
   }
 }
 
-class Machine extends Component {
+export class Machine extends Component {
   constructor(props) {
     // NOTE : initialization has to be done in the constructor
     // componentDidMount is invoked **after** the component is rendered
@@ -51,9 +51,12 @@ class Machine extends Component {
     // is configured on the INIT transition of the machine
 
     super(props);
+    this.state = { render: null };
+  }
 
+  componentDidMount() {
     const machineComponent = this;
-    const { intentFactory, fsmSpecs, actionExecutorSpecs, settings } = props;
+    const { intentFactory, fsmSpecs, actionExecutorSpecs, settings } = machineComponent.props;
     this.eventSource = new Rx.Subject();
     // NOTE: we put settings last. this way `updateState` can be overridden in settings
     const fsm = create_state_machine(fsmSpecs, { updateState: applyJSONpatch, ...settings });
@@ -66,20 +69,15 @@ class Machine extends Component {
       .startWith(initialAction)
       .subscribe(actionExecuter)
     ;
-
-    this.state = { render: null };
-  }
-
-  componentDidMount() {
-
   }
 
   componentWillUnmount() {
     this.eventSource.complete();
   }
 
-  render(state) {
-    return state.render
+  render() {
+    const machineComponent = this;
+    return machineComponent.state.render || null
   }
 }
 
@@ -112,5 +110,5 @@ const App = React.createElement(Machine, {
 //     );
 //   }
 // }
-
-export default App;
+//
+// export default App;
