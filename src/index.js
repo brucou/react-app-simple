@@ -1,19 +1,19 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-import App, { Machine } from './App';
+import { Machine } from './Machine';
 import * as serviceWorker from './serviceWorker';
 import { machines } from "./fixtures/sample-machines"
 
-const MachineElement = React.createElement(Machine, {
+const App = React.createElement(Machine, {
   intentFactory: null,
-  fsmSpecs: machines.initWithRender,
+  fsmSpecs: machines.initWithRenderAndEvent,
   actionExecutorSpecs: {},
   settings: {}
 }, null);
 
 ReactDOM.render(
-  MachineElement,
+  App,
   document.getElementById('root')
 );
 

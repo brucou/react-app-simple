@@ -5,6 +5,9 @@
  * @typedef {Subject} EventSource
  */
 /**
+ * @typedef {function (EventSource) : Observable} IntentSourceFactory
+ */
+/**
  * @typedef {String} EventName
  */
 /**

@@ -1,11 +1,8 @@
 import React, { Component } from 'react';
-// import logo from './logo.svg';
-import './App.css';
 import { create_state_machine, NO_OUTPUT } from "state-transducer";
 import { applyJSONpatch, identity } from "./helpers";
 import Rx from 'rxjs/Rx'
 import { COMMAND_RENDER, ERR_ACTION_EXECUTOR_COMMAND_EXEC } from "./properties"
-import { machines } from "./fixtures/sample-machines"
 
 // const $ = Rx.Observable;
 
@@ -17,6 +14,7 @@ import { machines } from "./fixtures/sample-machines"
 export function triggerFnFactory(eventSource) {
   return eventName => {
     return function (...args) {
+      debugger
       return eventSource.next({ [eventName]: args })
     }
   }
@@ -56,7 +54,7 @@ export class Machine extends Component {
 
   componentDidMount() {
     const machineComponent = this;
-    const { intentFactory, fsmSpecs, actionExecutorSpecs, settings } = machineComponent.props;
+    const { intentSourceFactory, fsmSpecs, actionExecutorSpecs, settings } = machineComponent.props;
     this.eventSource = new Rx.Subject();
     // NOTE: we put settings last. this way `updateState` can be overridden in settings
     const fsm = create_state_machine(fsmSpecs, { updateState: applyJSONpatch, ...settings });
@@ -64,7 +62,7 @@ export class Machine extends Component {
     const actionExecuter = actionExecuterFactory(machineComponent, trigger, actionExecutorSpecs);
     const initialAction = fsm.start();
 
-    (intentFactory || identity)(this.eventSource)
+    (intentSourceFactory || identity)(this.eventSource)
       .map(fsm.yield)
       .startWith(initialAction)
       .subscribe(actionExecuter)
@@ -81,13 +79,8 @@ export class Machine extends Component {
   }
 }
 
-const App = React.createElement(Machine, {
-  intentFactory: null,
-  fsmSpecs: machines.initWithRender,
-  actionExecutorSpecs: {},
-  settings: {}
-}, null);
-
+// import './App.css';
+// import logo from './logo.svg';
 // class App extends Component {
 //   render() {
 //     return (

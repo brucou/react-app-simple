@@ -2,17 +2,21 @@ import React  from 'react';
 import h from "react-hyperscript"
 import hyperscript from "hyperscript-helpers"
 
-const {div, span, h1} = hyperscript(h);
+const {div, button, span, h1} = hyperscript(h);
 
 export class Hello extends React.Component {
   render() {
-    return <div>Hello {this.props.toWhat}</div>;
+    const Component = this;
+    const {toWhat} = Component.props;
+    return div(`Hello ${toWhat}`)
   }
 }
 
 export class Counter extends React.Component {
   render() {
-    return <button>{this.props.count}</button>;
+    const Component = this;
+    const {count} = Component.props;
+    return button(`Count : ${count}`);
   }
 }
 

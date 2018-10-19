@@ -59,3 +59,10 @@ export function renderCommandFactory(Component, props = {}) {
     params: trigger => React.createElement(Component, props, null)
   }
 }
+
+export function renderAction(params){
+  return {
+    command : COMMAND_RENDER,
+    params
+  }
+}
