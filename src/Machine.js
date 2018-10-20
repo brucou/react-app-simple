@@ -14,8 +14,9 @@ import { COMMAND_RENDER, ERR_ACTION_EXECUTOR_COMMAND_EXEC } from "./properties"
 export function triggerFnFactory(eventSource) {
   return eventName => {
     // NOTE : that assumes all event handlers have only one parameter
-    return function (event) {
-      return eventSource.next({ [eventName]: event })
+    // `ref` here is React.ref that is optionally passed
+    return function (eventData, ref) {
+      return eventSource.next([eventName, eventData, ref]);
     }
   }
 }

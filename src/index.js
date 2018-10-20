@@ -6,16 +6,16 @@ import * as serviceWorker from './serviceWorker';
 import { machines } from "./fixtures/sample-machines"
 
 
-const App = React.createElement(Machine, {
-  entryActions: machines.initWithRenderAndEvent.entryActions,
-  intentSourceFactory: machines.initWithRenderAndEvent.intentSourceFactory,
-  fsmSpecs: machines.initWithRenderAndEvent,
-  actionExecutorSpecs: {},
+const App = machine => React.createElement(Machine, {
+  entryActions: machine.entryActions,
+  intentSourceFactory: machine.intentSourceFactory,
+  fsmSpecs: machine,
+  actionExecutorSpecs: machine.actionExecutorSpecs,
   settings: {}
 }, null);
 
 ReactDOM.render(
-  App,
+  App(machines.initWithRender),
   document.getElementById('root')
 );
 

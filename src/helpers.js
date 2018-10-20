@@ -64,18 +64,23 @@ export function renderAction(params) {
   return {
     outputs: {
       command: COMMAND_RENDER,
-      params,
-      // NOTE : this is not used anyways, there is no sense in updating the extended state in this context
-      // We keep it for type consistency
-      updateState: []
+      params
     }
   }
 }
 
-export function getEventName(labelledEvent) {
-  return Object.keys(labelledEvent)[0]
+export function getEventName(eventStruct) {
+  return eventStruct[0]
 }
 
-export function getEventData(labelledEvent) {
-  return Object.values(labelledEvent)[0]
+export function getEventData(eventStruct) {
+  return eventStruct[1]
+}
+
+export function destructureEvent(eventStruct){
+  return {
+    eventName : eventStruct[0],
+    eventData : eventStruct[1],
+    ref : eventStruct[2]
+  }
 }
