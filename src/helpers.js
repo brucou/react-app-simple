@@ -1,5 +1,5 @@
 import { applyPatch } from "json-patch-es6";
-import { COMMAND_RENDER, CONTRACT_MODEL_UPDATE_FN_RETURN_VALUE } from "./properties";
+import { COMMAND_RENDER, CONTRACT_MODEL_UPDATE_FN_RETURN_VALUE, NO_STATE_UPDATE } from "./properties";
 import React from 'react';
 
 export function isBoolean(obj) {return typeof(obj) === 'boolean'}
@@ -65,7 +65,8 @@ export function renderAction(params) {
     outputs: {
       command: COMMAND_RENDER,
       params
-    }
+    },
+    updates : NO_STATE_UPDATE
   }
 }
 

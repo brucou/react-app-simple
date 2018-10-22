@@ -37,3 +37,6 @@
 // cf. https://reactjs.org/docs/forms.html
 // 2. Prefer uncontrolled components are ref!!!
 // cf. https://reactjs.org/docs/uncontrolled-components.html
+
+// Controlled vs. uncontrolled
+// - for input, if going uncontrolled, DO NOT USE `value` property on react component!!

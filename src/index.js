@@ -5,17 +5,18 @@ import { Machine } from './Machine';
 import * as serviceWorker from './serviceWorker';
 import { machines } from "./fixtures/sample-machines"
 
-
 const App = machine => React.createElement(Machine, {
   entryActions: machine.entryActions,
   intentSourceFactory: machine.intentSourceFactory,
   fsmSpecs: machine,
   actionExecutorSpecs: machine.actionExecutorSpecs,
-  settings: {}
+  settings: {},
+  componentWillUpdate : machine.componentWillUpdate( machine.inject),
+  componentDidUpdate: machine.componentDidUpdate(machine.inject)
 }, null);
 
 ReactDOM.render(
-  App(machines.initWithRender),
+  App(machines.imageGallery),
   document.getElementById('root')
 );
 

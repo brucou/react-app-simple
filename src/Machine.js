@@ -13,10 +13,11 @@ import { COMMAND_RENDER, ERR_ACTION_EXECUTOR_COMMAND_EXEC } from "./properties"
 // the functions are not in scope of the constructor?
 export function triggerFnFactory(eventSource) {
   return eventName => {
-    // NOTE : that assumes all event handlers have only one parameter
-    // `ref` here is React.ref that is optionally passed
-    return function (eventData, ref) {
-      return eventSource.next([eventName, eventData, ref]);
+    // DOC : by convention, [eventName, eventData, ref (optional), ...anything else]
+    // DOC : eventData is generally the raw event passed by the event handler
+    // DOC : `ref` here is :: React.Ref and is generally used to pass `ref`s for uncontrolled component
+    return function eventHandler(...args) {
+      return eventSource.next([eventName].concat(args));
     }
   }
 }
@@ -32,6 +33,7 @@ export function actionExecuterFactory(component, trigger, actionExecutorSpecs) {
       if (command === COMMAND_RENDER) {
         // render actions are :: trigger -> Component
         // and close over the extended state of the machine
+        // ...except in the infrequent case when we want to
         return component.setState({ render: params(trigger) })
       }
 
@@ -39,18 +41,28 @@ export function actionExecuterFactory(component, trigger, actionExecutorSpecs) {
       if (!execFn || typeof execFn !== 'function') {
         throw new Error(ERR_ACTION_EXECUTOR_COMMAND_EXEC(command))
       }
-      return execFn(params)
+      // NOTE :we choose this form to allow for currying down the road
+      return execFn(trigger, params)
     })
   }
 }
 
+/**
+ * Class implementing a reactive system modelled by a state machine (fsm).
+ * The system behaviour is determined by properties passed at construction time :
+ * - `intentSourceFactory` : translate user events and system events into machine events
+ * - `fsmSpecs` : configuration of the fsm
+ * - `settings` : optional settings to be passed to the fsm. This allow for parameterization of the
+ * behaviour of the machine
+ * - `entryActions` : action factories that are executed on entry of control states of the fsm
+ * - `actionExecutorSpecs` : maps commands output by the fsm to the function executing those commands
+ * - componentWillUpdate : a function for customizing `componentWillUpdate` for a class instance. That function
+ * however has a different signature, and incorporates the fsm's settings as parameters
+ * - componentDidUpdate : a function for customizing `componentDidUpdate` for a class instance. That function
+ * however has a different signature, and incorporates the fsm's settings as parameters
+ */
 export class Machine extends Component {
   constructor(props) {
-    // NOTE : initialization has to be done in the constructor
-    // componentDidMount is invoked **after** the component is rendered
-    // and here the first render should happen only if a rendering action
-    // is configured on the INIT transition of the machine
-
     super(props);
     this.state = { render: null };
   }
@@ -75,6 +87,20 @@ export class Machine extends Component {
 
   componentWillUnmount() {
     this.eventSource.complete();
+  }
+
+  componentDidUpdate(prevProps, prevState, snapshot){
+    // called after the render method.
+    const machineComponent = this;
+    const { componentDidUpdate:cdu, settings} = machineComponent.props;
+    cdu.call(null, machineComponent, prevProps, prevState, snapshot, settings );
+  }
+
+  componentWillUpdate(nextProps, nextState){
+    // perform any preparations for an upcoming update
+    const machineComponent = this;
+    const { componentWillUpdate:cwu, settings } = machineComponent.props;
+    cwu.call(null, machineComponent, nextProps, nextState, settings);
   }
 
   render() {
