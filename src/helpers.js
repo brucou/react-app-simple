@@ -1,6 +1,9 @@
 import { applyPatch } from "json-patch-es6";
 import { COMMAND_RENDER, CONTRACT_MODEL_UPDATE_FN_RETURN_VALUE, NO_STATE_UPDATE } from "./properties";
 import React from 'react';
+import { GalleryApp } from "./fixtures/sample-components"
+import h from "react-hyperscript"
+import fetchJsonp from "fetch-jsonp"
 
 export function isBoolean(obj) {return typeof(obj) === 'boolean'}
 
@@ -66,7 +69,7 @@ export function renderAction(params) {
       command: COMMAND_RENDER,
       params
     },
-    updates : NO_STATE_UPDATE
+    updates: NO_STATE_UPDATE
   }
 }
 
@@ -78,10 +81,28 @@ export function getEventData(eventStruct) {
   return eventStruct[1]
 }
 
-export function destructureEvent(eventStruct){
-  return {
-    eventName : eventStruct[0],
-    eventData : eventStruct[1],
-    ref : eventStruct[2]
+export function runSearchQuery(query) {
+  const encodedQuery = encodeURIComponent(query);
+
+  return fetchJsonp(
+    `https://api.flickr.com/services/feeds/photos_public.gne?lang=en-us&format=json&tags=${encodedQuery}`,
+    { jsonpCallback: 'jsoncallback' }
+  )
+    .then(res => res.json())
+}
+
+export function renderGalleryApp(galleryState) {
+  return (extendedState, eventData, fsmSettings) => {
+    const { query, items, photo } = extendedState;
+
+    return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: galleryState }, []));
   }
+}
+
+export function destructureEvent(eventStruct) {
+  return {
+    rawEventName: eventStruct[0],
+    rawEventData: eventStruct[1],
+    ref: eventStruct[2]
+  };
 }

@@ -1,4 +1,5 @@
-- README
+  // TODO : add updateState in props!!! so I can remove json patch from dependency
+  // TODO : remove also rxjs dependency, so pass it as props too = streamLibrary
 - bug when cancel is clicked, but the search is performed and we do not cancel the incoming 
 result, so we have event sent with no items which erase the screen
   - so problem for actually really cancelling a request in the air... to investigate
@@ -20,7 +21,6 @@ result, so we have event sent with no items which erase the screen
 - update terminology and types :
   - action : {updates, outputs}
   - command : element from outputs
-- try with a state machine from statecharts gitter
 - try with state machine demo (maybe use some react ui library)
 - write doc
 - publish to the world!!
@@ -39,11 +39,19 @@ result, so we have event sent with no items which erase the screen
   - here we change state and the event does not trigger anything so good
   - but if we were in the same state we would have a problem
 
-# react-hyperscripts
-h(componentOrTag, properties, children)
-Returns a React element.
-
-componentOrTag Object|String - Can be a React component OR tag string with optional css class names/id in the format h1#some-id.foo.bar. If a tag string, it will parse out the tag name and change the id and className properties of the properties object.
-properties Object (optional) - An object containing the properties you'd like to set on the element.
-children Array|String (optional) - An array of h() children or a string. This will create child elements or a text node, respectively.
-listOfElements Array - An array of React elements that will be wrapped with React.Fragment.
+# Testing
+(move to react notes) 
+- use inline snapshots, then write factor the snapshots into a function
+  - for <Gallery...> would be factored into a function (props) -> HTML NO
+  - well factor into as many functions you want, the idea is it has to be fast and correct and 
+  lower complexity
+- test the fsm as usual
+  - include async events
+  - don't include those events which are ignored by the machine (total tests would)
+- then test intentFactory
+- integration tests which include the effectful parts
+  - test actions
+  - test events
+- we are done, if <Machine> itself is correctly tested, we are done
+- test the <Machine> then!!!
+  - this is where React test utils could be useful

@@ -39,18 +39,18 @@
   - CAN ALSO USE React.createElement(Hello, {toWhat: 'World'}, null) !! that is the best syntax
   - CAN ALSO USE https://github.com/mlmorg/react-hyperscript and https://github.com/ohanhi/hyperscript-helpers
     - EVEN BETTER!!!! no jsx
-  - action.params = trigger => <Component onClick = trigger(eventName)>
+  - action.params = trigger => <Component onClick = trigger(rawEventName)>
     - but then I recompute each time..., could I memoize trigger??
 - `trigger` works for user events
 - for system events (like responses from actions), the response needs to be fed back to the fsm
-  - for instance fetch(url).then(fsm.yield([eventName] : {...}))
+  - for instance fetch(url).then(fsm.yield([rawEventName] : {...}))
   - use a subject as event source
 - Machine
   - init : 
     - create and initialize fsm -> initial action
     - create event source subject
     - initialize trigger from fsm.yield and event source subject
-    - write IntentFactory(eventSource).map(fsm.yield).filter(NO_OUTPUTS).startWith(initial action)
+    - write IntentFactory(rawEventSource).map(fsm.yield).filter(NO_OUTPUTS).startWith(initial action)
     .subscribe(ActionExecuter)
       - or use streamingStateMachine?? LATER
     - create action executer from ActionExecutorSpecs 
@@ -72,7 +72,7 @@
     - ActionExecuter :: Action -> ()
       - command render is reserved
       - for command = render, setState({render: action.params})
-        - action.params =  trigger => <Comp1 Click=trigger(eventName)> for instance
+        - action.params =  trigger => <Comp1 Click=trigger(rawEventName)> for instance
       - for other commands, lookup command table and run `Run` with Action.params
       - note that this means that actions are stateless, all the state must be in the state 
       machine with the exception of `render` property to trigger rendering

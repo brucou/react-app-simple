@@ -1,30 +1,17 @@
 import { INIT_EVENT, INIT_STATE, NO_OUTPUT } from "state-transducer";
 import {
   Counter, GalleryApp, Hello, Input, InputWithExplicitRef, InputWithImplicitRef, TextMessage
-} from './sample-components'
+} from './sample-components';
 import {
   BUTTON_CLICKED, COMMAND_SEARCH, ENTER_KEY_PRESSED, INPUT_CHANGED, KEY_ENTER, KEY_PRESSED, NO_ACTIONS, NO_INTENT,
   NO_STATE_UPDATE
-} from "../properties"
-import { destructureEvent, getEventData, getEventName, renderAction, renderCommandFactory } from "../helpers"
-import h from "react-hyperscript"
+} from "../properties";
+import { destructureEvent, renderAction } from "react-state-driven";
+import { getEventData, getEventName, renderCommandFactory, renderGalleryApp, runSearchQuery } from "../helpers";
+import h from "react-hyperscript";
 import React from 'react';
-import fetchJsonp from 'fetch-jsonp';
 import Flipping from 'flipping';
 
-export const helpers = {
-  runSearchQuery: query => {
-    const encodedQuery = encodeURIComponent(query);
-
-    return fetchJsonp(
-      `https://api.flickr.com/services/feeds/photos_public.gne?lang=en-us&format=json&tags=${encodedQuery}`,
-      { jsonpCallback: 'jsoncallback' }
-    )
-      .then(res => res.json())
-  }
-};
-
-/** @type {Object.<String, FSM_Def>} */
 export const machines = {
   initWithRender: {
     states: { A: '' },
@@ -43,7 +30,7 @@ export const machines = {
   },
   initWithRenderAndEvent: {
     // NOTE : only one event so not much to do
-    intentSourceFactory: eventSource => eventSource.map(ev => ({ [getEventName(ev)]: getEventData(ev) })),
+    preprocessor: rawEventSource => rawEventSource.map(ev => ({ [getEventName(ev)]: getEventData(ev) })),
     entryActions: {
       A: (extendedState, eventData, fsmSettings) => {
         const { count } = extendedState;
@@ -72,14 +59,14 @@ export const machines = {
     initialExtendedState: { count: 0, type: 'none' }
   },
   controlledForm: {
-    intentSourceFactory: eventSource => eventSource.map(ev => {
-      const { eventName, eventData } = destructureEvent(ev);
+    preprocessor: rawEventSource => rawEventSource.map(ev => {
+      const { rawEventName, rawEventData } = destructureEvent(ev);
 
-      if (eventName === INPUT_CHANGED) {
-        return { [INPUT_CHANGED]: eventData.target.value }
+      if (rawEventName === INPUT_CHANGED) {
+        return { [INPUT_CHANGED]: rawEventData.target.value }
       }
-      else if (eventName === KEY_PRESSED) {
-        return eventData.key === KEY_ENTER
+      else if (rawEventName === KEY_PRESSED) {
+        return rawEventData.key === KEY_ENTER
           ? { [ENTER_KEY_PRESSED]: void 0 }
           : NO_INTENT
       }
@@ -122,12 +109,12 @@ export const machines = {
     initialExtendedState: { placeHolder: 'Enter some text', value: '' }
   },
   uncontrolledFormWithExplicitRef: {
-    intentSourceFactory: eventSource => eventSource
+    preprocessor: rawEventSource => rawEventSource
       .map(ev => {
-        const { eventName, eventData, ref } = destructureEvent(ev);
+        const { rawEventName, rawEventData, ref } = destructureEvent(ev);
 
-        if (eventName === KEY_PRESSED) {
-          return eventData.key === KEY_ENTER
+        if (rawEventName === KEY_PRESSED) {
+          return rawEventData.key === KEY_ENTER
             ? { [ENTER_KEY_PRESSED]: ref.current.value }
             : NO_INTENT
         }
@@ -164,13 +151,13 @@ export const machines = {
     initialExtendedState: { placeHolder: 'Enter some text', entered: '' }
   },
   uncontrolledFormWithImplicitRef: {
-    intentSourceFactory: eventSource => eventSource
+    preprocessor: rawEventSource => rawEventSource
       .map(ev => {
-        const { eventName, eventData } = destructureEvent(ev);
+        const { rawEventName, rawEventData } = destructureEvent(ev);
 
-        if (eventName === KEY_PRESSED) {
-          return eventData.key === KEY_ENTER
-            ? { [ENTER_KEY_PRESSED]: eventData.value }
+        if (rawEventName === KEY_PRESSED) {
+          return rawEventData.key === KEY_ENTER
+            ? { [ENTER_KEY_PRESSED]: rawEventData.value }
             : NO_INTENT
         }
         return NO_INTENT
@@ -206,48 +193,43 @@ export const machines = {
     initialExtendedState: { placeHolder: 'Enter some text', entered: '' }
   },
   imageGallery: {
-    inject: new Flipping(),
-    initialExtendedState: { query: '', items: [], photo: undefined },
+    initialExtendedState: { query: '', items: [], photo: undefined, gallery: '' },
     states: { start: '', loading: '', gallery: '', error: '', photo: '' },
     events: ['SEARCH', 'SEARCH_SUCCESS', 'SEARCH_FAILURE', 'CANCEL_SEARCH', 'SELECT_PHOTO', 'EXIT_PHOTO'],
-    entryActions: {
-      loading: (extendedState, eventData, fsmSettings) => {
-        const { items, photo } = extendedState;
-        const query = eventData;
-        const searchCommand = {
-          command: COMMAND_SEARCH,
-          params: query
-        };
-        const renderGalleryAction = renderAction(trigger =>
-          h(GalleryApp, { query, items, trigger, photo, gallery: 'loading' }, [])
-        );
+    preprocessor: rawEventSource => rawEventSource
+      .map(ev => {
+        const { rawEventName, rawEventData: e, ref } = destructureEvent(ev);
 
-        return {
-          outputs: [searchCommand, renderGalleryAction.outputs],
-          updates: NO_STATE_UPDATE
+        // Form raw events
+        if (rawEventName === 'onSubmit') {
+          e.persist();
+          e.preventDefault();
+          return { SEARCH: ref.current.value }
         }
-      },
-      photo: (extendedState, eventData, fsmSettings) => {
-        const { query, items, photo } = extendedState;
+        else if (rawEventName === 'onCancelClick') {
+          return { CANCEL_SEARCH: void 0 }
+        }
+        // Gallery
+        else if (rawEventName === 'onGalleryClick') {
+          const item = e;
+          return { SELECT_PHOTO: item }
+        }
+        // Photo detail
+        else if (rawEventName === 'onPhotoClick') {
+          return { EXIT_PHOTO: void 0 }
+        }
+        // System events
+        else if (rawEventName === 'SEARCH_SUCCESS') {
+          const items = e;
+          return { SEARCH_SUCCESS: items }
+        }
+        else if (rawEventName === 'SEARCH_FAILURE') {
+          return { SEARCH_FAILURE: void 0 }
+        }
 
-        return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: 'photo' }, []));
-      },
-      gallery: (extendedState, eventData, fsmSettings) => {
-        const { query, items, photo } = extendedState;
-
-        return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: 'gallery' }, []))
-      },
-      error: (extendedState, eventData, fsmSettings) => {
-        const { query, items, photo } = extendedState;
-
-        return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: 'error' }, []))
-      },
-      start: (extendedState, eventData, fsmSettings) => {
-        const { query, items, photo } = extendedState;
-
-        return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: 'start' }, []))
-      },
-    },
+        return NO_INTENT
+      })
+      .filter(x => x !== NO_INTENT),
     transitions: [
       { from: INIT_STATE, event: INIT_EVENT, to: 'start', action: NO_ACTIONS },
       { from: 'start', event: 'SEARCH', to: 'loading', action: NO_ACTIONS },
@@ -257,7 +239,7 @@ export const machines = {
 
           return {
             updates: [{ op: 'add', path: '/items', value: items }],
-            outputs : NO_OUTPUT
+            outputs: NO_OUTPUT
           }
         }
       },
@@ -277,43 +259,31 @@ export const machines = {
       },
       { from: 'photo', event: 'EXIT_PHOTO', to: 'gallery', action: NO_ACTIONS },
     ],
-    intentSourceFactory: eventSource => eventSource
-      .map(ev => {
-        const { eventName, eventData: e, ref } = destructureEvent(ev);
+    entryActions: {
+      loading: (extendedState, eventData, fsmSettings) => {
+        const { items, photo } = extendedState;
+        const query = eventData;
+        const searchCommand = {
+          command: COMMAND_SEARCH,
+          params: query
+        };
+        const renderGalleryAction = renderAction(trigger =>
+          h(GalleryApp, { query, items, trigger, photo, gallery: 'loading' }, [])
+        );
 
-        // Form raw events
-        if (eventName === 'onSubmit') {
-          e.persist();
-          e.preventDefault();
-          return { SEARCH: ref.current.value }
+        return {
+          outputs: [searchCommand, renderGalleryAction.outputs],
+          updates: NO_STATE_UPDATE
         }
-        else if (eventName === 'onCancelClick') {
-          return { CANCEL_SEARCH: void 0 }
-        }
-        // Gallery
-        else if (eventName === 'onGalleryClick') {
-          const item = e;
-          return { SELECT_PHOTO: item }
-        }
-        // Photo detail
-        else if (eventName === 'onPhotoClick') {
-          return { EXIT_PHOTO: void 0 }
-        }
-        // System events
-        else if (eventName === 'SEARCH_SUCCESS') {
-          const items = e;
-          return { SEARCH_SUCCESS: items }
-        }
-        else if (eventName === 'SEARCH_FAILURE') {
-          return { SEARCH_FAILURE: void 0 }
-        }
-
-        return NO_INTENT
-      })
-      .filter(x => x !== NO_INTENT),
-    actionExecutorSpecs: {
+      },
+      photo: renderGalleryApp('photo'),
+      gallery: renderGalleryApp('gallery'),
+      error: renderGalleryApp('error'),
+      start: renderGalleryApp('start'),
+    },
+    commandHandlers: {
       [COMMAND_SEARCH]: (trigger, query) => {
-        helpers.runSearchQuery(query)
+        runSearchQuery(query)
           .then(data => {
             trigger('SEARCH_SUCCESS')(data.items)
           })
@@ -322,14 +292,13 @@ export const machines = {
           });
       }
     },
+    inject: new Flipping(),
     componentDidUpdate: flipping => (machineComponent, prevProps, prevState, snapshot, settings) => {flipping.read();},
     componentWillUpdate: flipping => (machineComponent, nextProps, nextState, settings) => {flipping.flip();}
   }
 };
 
-// TODO : machine with outputs to test the action executer no render command, find some demo with xstate there
+// TODO : move Machine component into separate package
+// TODO : test demo with xstate (imageGallery)
 // TODO : showcase usage of settings to parametrize the state machine for outside
-// at the end, with a linked summary of all examples. The parameter will be which state machine to run? NO
-// or just display a parameter that is passed in settings
-// TODO : use an UI library : AFTER
 // TODO : do my state machine demo with react instead of cyclejs

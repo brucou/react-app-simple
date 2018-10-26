@@ -1,50 +1,48 @@
-import React, { Component } from 'react';
+import { Component } from "react";
 import { create_state_machine, decorateWithEntryActions, NO_OUTPUT } from "state-transducer";
-import { applyJSONpatch, identity } from "./helpers";
-import Rx from 'rxjs/Rx'
-import { COMMAND_RENDER, ERR_ACTION_EXECUTOR_COMMAND_EXEC } from "./properties"
+import { COMMAND_RENDER, ERR_COMMAND_HANDLERS } from "./properties";
 
-// const $ = Rx.Observable;
+const identity = x => x;
 
 // Machine helpers
 // NOTE: they are declared out of the Machine component as they do not depend on the Machine
 // They are declared here for cohesiveness purposes
 // Declaring them inside did not seem to work anyways :
 // the functions are not in scope of the constructor?
-export function triggerFnFactory(eventSource) {
-  return eventName => {
-    // DOC : by convention, [eventName, eventData, ref (optional), ...anything else]
-    // DOC : eventData is generally the raw event passed by the event handler
+export function triggerFnFactory(rawEventSource) {
+  return rawEventName => {
+    // DOC : by convention, [rawEventName, rawEventData, ref (optional), ...anything else]
+    // DOC : rawEventData is generally the raw event passed by the event handler
     // DOC : `ref` here is :: React.Ref and is generally used to pass `ref`s for uncontrolled component
     return function eventHandler(...args) {
-      return eventSource.next([eventName].concat(args));
-    }
-  }
+      return rawEventSource.next([rawEventName].concat(args));
+    };
+  };
 }
 
-export function actionExecuterFactory(component, trigger, actionExecutorSpecs) {
+export function commandHandlerFactory(component, trigger, commandHandlers) {
   return actions => {
-    if (actions === NO_OUTPUT) {return}
+    if (actions === NO_OUTPUT) {return;}
 
     actions.forEach(action => {
-      if (action === NO_OUTPUT) {return}
+      if (action === NO_OUTPUT) {return;}
 
       const { command, params } = action;
       if (command === COMMAND_RENDER) {
         // render actions are :: trigger -> Component
         // and close over the extended state of the machine
         // ...except in the infrequent case when we want to
-        return component.setState({ render: params(trigger) })
+        return component.setState({ render: params(trigger) });
       }
 
-      const execFn = actionExecutorSpecs[command];
-      if (!execFn || typeof execFn !== 'function') {
-        throw new Error(ERR_ACTION_EXECUTOR_COMMAND_EXEC(command))
+      const execFn = commandHandlers[command];
+      if (!execFn || typeof execFn !== "function") {
+        throw new Error(ERR_COMMAND_HANDLERS(command));
       }
       // NOTE :we choose this form to allow for currying down the road
-      return execFn(trigger, params)
-    })
-  }
+      return execFn(trigger, params);
+    });
+  };
 }
 
 /**
@@ -69,69 +67,58 @@ export class Machine extends Component {
 
   componentDidMount() {
     const machineComponent = this;
-    const { intentSourceFactory, fsmSpecs, actionExecutorSpecs, entryActions, settings } = machineComponent.props;
-    this.eventSource = new Rx.Subject();
-    // NOTE: we put settings last. this way `updateState` can be overridden in settings
-    const fsmSpecsWithEntryActions = decorateWithEntryActions(fsmSpecs, entryActions, null);
-    const fsm = create_state_machine(fsmSpecsWithEntryActions, { updateState: applyJSONpatch, ...settings });
-    const trigger = triggerFnFactory(this.eventSource);
-    const actionExecuter = actionExecuterFactory(machineComponent, trigger, actionExecutorSpecs);
-    const initialAction = fsm.start();
+    const { subjectFactory, fsmSpecs, commandHandlers, entryActions, preprocessor, settings } = machineComponent.props;
+    assertPropsContract(machineComponent.props);
 
-    (intentSourceFactory || identity)(this.eventSource)
+    // NOTE : the preprocessor can be any library but must replicate the relevant Rx API
+    const Rx = subjectFactory;
+    this.rawEventSource = new Rx.Subject();
+    // NOTE: we put settings last: this way `updateState` can be overridden in settings
+    const fsmSpecsWithEntryActions = decorateWithEntryActions(fsmSpecs, entryActions, null);
+    const fsm = create_state_machine(fsmSpecsWithEntryActions, settings);
+    const trigger = triggerFnFactory(this.rawEventSource);
+    const globalCommandHandler = commandHandlerFactory(machineComponent, trigger, commandHandlers);
+    const initialCommand = fsm.start();
+
+    (preprocessor || identity)(this.rawEventSource)
       .map(fsm.yield)
-      .startWith(initialAction)
-      .subscribe(actionExecuter)
+      .startWith(initialCommand)
+      .subscribe(globalCommandHandler)
     ;
   }
 
   componentWillUnmount() {
-    this.eventSource.complete();
+    this.rawEventSource.complete();
   }
 
-  componentDidUpdate(prevProps, prevState, snapshot){
+  componentDidUpdate(prevProps, prevState, snapshot) {
     // called after the render method.
     const machineComponent = this;
-    const { componentDidUpdate:cdu, settings} = machineComponent.props;
-    cdu.call(null, machineComponent, prevProps, prevState, snapshot, settings );
+    const { componentDidUpdate: cdu, settings } = machineComponent.props;
+
+    if (cdu){
+      cdu.call(null, machineComponent, prevProps, prevState, snapshot, settings);
+    }
   }
 
-  componentWillUpdate(nextProps, nextState){
+  componentWillUpdate(nextProps, nextState) {
     // perform any preparations for an upcoming update
     const machineComponent = this;
-    const { componentWillUpdate:cwu, settings } = machineComponent.props;
-    cwu.call(null, machineComponent, nextProps, nextState, settings);
+    const { componentWillUpdate: cwu, settings } = machineComponent.props;
+
+    if (cwu){
+      cwu.call(null, machineComponent, nextProps, nextState, settings);
+    }
   }
 
   render() {
     const machineComponent = this;
-    return machineComponent.state.render || null
+    return machineComponent.state.render || null;
   }
 }
 
-// import './App.css';
-// import logo from './logo.svg';
-// class App extends Component {
-//   render() {
-//     return (
-//       <div className="App">
-//         <header className="App-header">
-//           <img src={logo} className="App-logo" alt="logo"/>
-//           <p>
-//             Edit <code>src/App.js</code> and save to reload.
-//           </p>
-//           <a
-//             className="App-link"
-//             href="https://reactjs.org"
-//             target="_blank"
-//             rel="noopener noreferrer"
-//           >
-//             Learn React
-//           </a>
-//         </header>
-//       </div>
-//     );
-//   }
-// }
-//
-// export default App;
+function assertPropsContract(props){
+  const { subjectFactory, fsmSpecs, commandHandlers, entryActions, preprocessor, settings } = props;
+  if (!subjectFactory) throw `<Machine/> : subjectFactory props has a falsy value!`
+  if (!fsmSpecs) throw `<Machine/> : fsmSpecs props has a falsy value! Should be specifications for the state machine!`
+}
