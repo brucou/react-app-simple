@@ -293,8 +293,8 @@ export const machines = {
       }
     },
     inject: new Flipping(),
-    componentDidUpdate: flipping => (machineComponent, prevProps, prevState, snapshot, settings) => {flipping.read();},
-    componentWillUpdate: flipping => (machineComponent, nextProps, nextState, settings) => {flipping.flip();}
+    componentWillUpdate: flipping => (machineComponent, prevProps, prevState, snapshot, settings) => {flipping.read();},
+    componentDidUpdate: flipping => (machineComponent, nextProps, nextState, settings) => {flipping.flip();}
   }
 };
 
