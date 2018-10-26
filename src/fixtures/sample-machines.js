@@ -298,7 +298,6 @@ export const machines = {
   }
 };
 
-// TODO : move Machine component into separate package
 // TODO : test demo with xstate (imageGallery)
 // TODO : showcase usage of settings to parametrize the state machine for outside
 // TODO : do my state machine demo with react instead of cyclejs
