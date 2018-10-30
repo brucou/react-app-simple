@@ -7,10 +7,14 @@ import {
   NO_STATE_UPDATE
 } from "../properties";
 import { destructureEvent, renderAction } from "react-state-driven";
-import { getEventData, getEventName, renderCommandFactory, renderGalleryApp, runSearchQuery } from "../helpers";
+import {
+  getEventData, getEventName, immerReducer, mergeOutputs, renderCommandFactory, renderGalleryApp, renderGalleryAppImmer,
+  runSearchQuery
+} from "../helpers";
 import h from "react-hyperscript";
 import React from 'react';
 import Flipping from 'flipping';
+import { nothing } from "immer"
 
 export const machines = {
   initWithRender: {
@@ -295,9 +299,126 @@ export const machines = {
     inject: new Flipping(),
     componentWillUpdate: flipping => (machineComponent, prevProps, prevState, snapshot, settings) => {flipping.read();},
     componentDidUpdate: flipping => (machineComponent, nextProps, nextState, settings) => {flipping.flip();}
+  },
+};
+export const xstateMachines = {
+  xstateImageGallery: {
+    preprocessor: rawEventSource => rawEventSource
+      .map(ev => {
+        const { rawEventName, rawEventData: e, ref } = destructureEvent(ev);
+
+        // Form raw events
+        if (rawEventName === 'onSubmit') {
+          e.persist();
+          e.preventDefault();
+          return { type: 'SEARCH', data: ref.current.value }
+        }
+        else if (rawEventName === 'onCancelClick') {
+          return { type: 'CANCEL_SEARCH', data: void 0 }
+        }
+        // Gallery
+        else if (rawEventName === 'onGalleryClick') {
+          const item = e;
+          return { type: 'SELECT_PHOTO', data: item }
+        }
+        // Photo detail
+        else if (rawEventName === 'onPhotoClick') {
+          return { type: 'EXIT_PHOTO', data: void 0 }
+        }
+        // System events
+        else if (rawEventName === 'SEARCH_SUCCESS') {
+          const items = e;
+          return { type: 'SEARCH_SUCCESS', data: items }
+        }
+        else if (rawEventName === 'SEARCH_FAILURE') {
+          return { type: 'SEARCH_FAILURE', data: void 0 }
+        }
+
+        return NO_INTENT
+      })
+      .filter(x => x !== NO_INTENT)
+    // .startWith(INIT_EVENT)
+    ,
+    // DOC : we kept the same machine but :
+    // - added the render actions
+    // - render must go last, in order to get the updated extended state
+    // - added an init event to trigger an entry on the initial state
+    config: {
+      context: { query: '', items: [], photo: undefined, gallery: '' },
+      initial: 'init',
+      states: {
+        init: {
+          on: { [INIT_EVENT]: 'start' }
+        },
+        start: {
+          onEntry: [renderGalleryAppImmer('start')],
+          on: { SEARCH: 'loading' }
+        },
+        loading: {
+          onEntry: ['search', renderGalleryAppImmer('loading')],
+          on: {
+            SEARCH_SUCCESS: { target: 'gallery', actions: ['updateItems'] },
+            SEARCH_FAILURE: 'error',
+            CANCEL_SEARCH: 'gallery'
+          }
+        },
+        error: {
+          onEntry: [renderGalleryAppImmer('error')],
+          on: { SEARCH: 'loading' }
+        },
+        gallery: {
+          onEntry: [renderGalleryAppImmer('gallery')],
+          on: {
+            SEARCH: 'loading',
+            SELECT_PHOTO: 'photo'
+          }
+        },
+        photo: {
+          onEntry: ['setPhoto', renderGalleryAppImmer('photo')],
+          on: { EXIT_PHOTO: 'gallery' }
+        }
+      }
+    },
+    actionFactoryMap: {
+      'search': (extendedState, { data: query }, xstateAction) => {
+        const searchCommand = { command: COMMAND_SEARCH, params: query };
+
+        return {
+          outputs: [searchCommand],
+          updates: nothing
+        }
+      },
+      'updateItems': (extendedState, { data: items }, xstateAction) => {
+        return {
+          updates: extendedState => {extendedState.items = items},
+          outputs: NO_OUTPUT
+        }
+      },
+      'setPhoto': (extendedState, { data: item }, xstateAction) => {
+        return {
+          updates: extendedState => {extendedState.photo = item},
+          outputs: NO_OUTPUT
+        }
+      }
+    },
+    updateState: immerReducer,
+    mergeOutputs: mergeOutputs,
+    commandHandlers: {
+      [COMMAND_SEARCH]: (trigger, query) => {
+        runSearchQuery(query)
+          .then(data => {
+            trigger('SEARCH_SUCCESS')(data.items)
+          })
+          .catch(error => {
+            trigger('SEARCH_FAILURE')(void 0)
+          });
+      }
+    },
+    inject: new Flipping(),
+    componentWillUpdate: flipping => (machineComponent, prevProps, prevState, snapshot, settings) => {flipping.read();},
+    componentDidUpdate: flipping => (machineComponent, nextProps, nextState, settings) => {flipping.flip();}
   }
 };
 
-// TODO : test demo with xstate (imageGallery)
 // TODO : do my state machine demo with react instead of cyclejs
 // TODO : testing async responses

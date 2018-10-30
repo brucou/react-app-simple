@@ -4,6 +4,7 @@ import React from 'react';
 import { GalleryApp } from "./fixtures/sample-components"
 import h from "react-hyperscript"
 import fetchJsonp from "fetch-jsonp"
+import produce, { nothing } from "immer"
 
 export function isBoolean(obj) {return typeof(obj) === 'boolean'}
 
@@ -64,13 +65,10 @@ export function renderCommandFactory(Component, props = {}) {
 }
 
 export function renderAction(params) {
-  return {
-    outputs: {
-      command: COMMAND_RENDER,
-      params
-    },
-    updates: NO_STATE_UPDATE
-  }
+  return { outputs: { command: COMMAND_RENDER, params }, updates: NO_STATE_UPDATE }
+}
+export function renderActionImmer(params) {
+  return { outputs: { command: COMMAND_RENDER, params }, updates: nothing }
 }
 
 export function getEventName(eventStruct) {
@@ -92,10 +90,18 @@ export function runSearchQuery(query) {
 }
 
 export function renderGalleryApp(galleryState) {
-  return (extendedState, eventData, fsmSettings) => {
+  return function _renderGalleryApp(extendedState, _, fsmSettings) {
     const { query, items, photo } = extendedState;
 
     return renderAction(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: galleryState }, []));
+  }
+}
+
+export function renderGalleryAppImmer(galleryState) {
+  return function _renderGalleryApp(extendedState, _, fsmSettings) {
+    const { query, items, photo } = extendedState;
+
+    return renderActionImmer(trigger => h(GalleryApp, { query, items, photo, trigger, gallery: galleryState }, []));
   }
 }
 
@@ -106,3 +112,14 @@ export function destructureEvent(eventStruct) {
     ref: eventStruct[2]
   };
 }
+
+export const NO_IMMER_UPDATES = nothing;
+export const immerReducer = function (extendedState, updates) {
+  if (updates === NO_IMMER_UPDATES) return extendedState
+  const updateFn = updates;
+  return produce(extendedState, updateFn)
+};
+
+export const mergeOutputs = function (accOutputs, outputs) {
+  return (accOutputs || []).concat(outputs || [])
+};

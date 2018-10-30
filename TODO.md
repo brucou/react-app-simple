@@ -1,5 +1,9 @@
-  // TODO : add updateState in props!!! so I can remove json patch from dependency
-  // TODO : remove also rxjs dependency, so pass it as props too = streamLibrary
+- implement that with state machine : https://github.com/sarimarton/tmdb-ui-cyclejs
+  - IMPL https://github.com/sarimarton/tmdb-ui-cyclejs
+  - it is very similar to image gallery but nice css, and simple machine
+  - implement it with cyclejs and post it on cycle group
+    - mmm could be problems with routing actually which destroys the machine component??
+  - implement it with combinators??
 - bug when cancel is clicked, but the search is performed and we do not cancel the incoming 
 result, so we have event sent with no items which erase the screen
   - so problem for actually really cancelling a request in the air... to investigate
