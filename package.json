@@ -5,7 +5,7 @@
   "keywords": [],
   "main": "src/index.js",
   "dependencies": {
-    "react-state-driven": "^0.1.2",
+    "react-state-driven": "^0.2.0",
     "hyperscript-helpers": "^3.0.3",
     "json-patch-es6": "^2.0.6",
     "react": "16.5.2",

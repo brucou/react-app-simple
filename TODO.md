@@ -1,3 +1,7 @@
+// TODO : do my state machine demo with react instead of cyclejs
+// TODO : testing async responses
+- try to do a sandbox with one of the sandboxes from https://github.com/GantMan/ReactStateMuseum,
+ for instance purestore!!
 - implement that with state machine : https://github.com/sarimarton/tmdb-ui-cyclejs
   - IMPL https://github.com/sarimarton/tmdb-ui-cyclejs
   - it is very similar to image gallery but nice css, and simple machine
@@ -13,7 +17,7 @@ result, so we have event sent with no items which erase the screen
     - another search starts -> and the previous search returns with empty -> machine display 
     empty results
     - the second search results arrive and its results are discarded
-    - put a counter in the SEARCH_SUCECSS emission to check it!!
+    - put a counter in the SEARCH_SUCCESS emission to check it!!
     - basically the solution is to keep a record of which request answer is expected!!
     - note that this can be proven by testing BUT! SEARCH_SUCCESS can occur at any time, so I 
     would need to extend my machine testing to in any state, send any async event
@@ -22,12 +26,7 @@ result, so we have event sent with no items which erase the screen
       part of the specs.
       - add that to the machine demo testing repertory
       - then at some point write a docs specializing on state machine testing
-- update terminology and types :
-  - action : {updates, outputs}
-  - command : element from outputs
 - try with state machine demo (maybe use some react ui library)
-- write doc
-- publish to the world!!
 
 # Later
 - cycle possibility to replicate this architecture with
