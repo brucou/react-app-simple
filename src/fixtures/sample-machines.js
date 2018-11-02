@@ -1,5 +1,7 @@
 import { INIT_EVENT, INIT_STATE, NO_OUTPUT } from "state-transducer";
-import { Counter, GalleryApp, InputWithExplicitRef, InputWithImplicitRef, TextMessage, Input } from './sample-components';
+import {
+  Counter, GalleryApp, InputWithExplicitRef, InputWithImplicitRef, TextMessage, Input, Hello
+} from './sample-components';
 import {
   BUTTON_CLICKED, COMMAND_SEARCH, ENTER_KEY_PRESSED, NO_ACTIONS, NO_INTENT, NO_STATE_UPDATE, INPUT_CHANGED, KEY_ENTER, KEY_PRESSED
 } from "../properties";
@@ -18,6 +20,7 @@ export const machines = {
   initWithRender: {
     states: { A: '' },
     events: [],
+    preprocessor: rawEventSource => rawEventSource.map(ev => ({ [getEventName(ev)]: getEventData(ev) })),
     transitions: [
       {
         from: INIT_STATE, event: INIT_EVENT, to: 'A', action: (extendedState, eventData, fsmSettings) => {
@@ -60,7 +63,6 @@ export const machines = {
     ],
     initialExtendedState: { count: 0, type: 'none' }
   },
-  // DOC : I have to add in tips & gotchas that preprocessor must deal with init event with state-transducer!!
   controlledForm: {
     preprocessor: rawEventSource => rawEventSource.map(ev => {
       debugger
@@ -426,11 +428,15 @@ export const machines = {
 export const xstateMachines = {
   xstateImageGallery: {
     preprocessor: rawEventSource => rawEventSource
+      .startWith([INIT_EVENT])
       .map(ev => {
         const { rawEventName, rawEventData: e, ref } = destructureEvent(ev);
 
+        if (rawEventName === INIT_EVENT) {
+          return { type: INIT_EVENT, data : void 0}
+        }
         // Form raw events
-        if (rawEventName === 'onSubmit') {
+        else if (rawEventName === 'onSubmit') {
           e.persist();
           e.preventDefault();
           return { type: 'SEARCH', data: ref.current.value }
