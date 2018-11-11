@@ -46,7 +46,7 @@ export function applyJSONpatch(extendedState, extendedStateUpdateOperations) {
 
   // NOTE : we don't validate operations, to avoid throwing errors when for instance the value property for an
   // `add` JSON operation is `undefined` ; and of course we don't mutate the document in place
-  return applyPatch(extendedState, extendedStateUpdateOperations, false, false).newDocument;
+  return applyPatch(extendedState, extendedStateUpdateOperations || [], false, false).newDocument;
 }
 
 export function identity(x) {return x}
