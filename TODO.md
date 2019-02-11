@@ -1,5 +1,8 @@
 // TODO : do my state machine demo with react instead of cyclejs
 // TODO : testing async responses
+- do a sandbox for each example, so I can get rid of this repo
+- also check if I did the concurrency thing or not (easy to do with state machines in the end, 
+update README)
 - try to do a sandbox with one of the sandboxes from https://github.com/GantMan/ReactStateMuseum,
  for instance purestore!!
 - implement that with state machine : https://github.com/sarimarton/tmdb-ui-cyclejs

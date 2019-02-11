@@ -5,6 +5,8 @@ import { GalleryApp } from "./fixtures/sample-components"
 import h from "react-hyperscript"
 import fetchJsonp from "fetch-jsonp"
 import produce, { nothing } from "immer"
+import { Subject, Observable } from "rxjs"
+import {transduceLazyObservable} from "transducers-es6"
 
 export function isBoolean(obj) {return typeof(obj) === 'boolean'}
 
@@ -123,3 +125,18 @@ export const immerReducer = function (extendedState, updates) {
 export const mergeOutputs = function (accOutputs, outputs) {
   return (accOutputs || []).concat(outputs || [])
 };
+
+export function defaultRenderHandler(component, newState, callback) {
+  return component.setState(newState, callback);
+}
+
+export function tryCatch(fn, err){
+  return function (...args){
+    try{
+      return fn.apply(null, args)
+    }
+    catch (e) {
+      return err(e)
+    }
+  }
+}
